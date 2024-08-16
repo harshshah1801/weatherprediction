@@ -1,0 +1,53 @@
+#!/bin/bash
+# Extracting IMD data
+
+###
+# Check for leap year
+###
+isleap() { 
+   year=$1
+   (( !(year % 4) && ( year % 100 || !(year % 400) ) )) &&
+      echo $"366" || echo $"365"
+      #echo $days
+}
+
+
+###
+# main script
+###
+rm -rf *.ctl
+touch {1951..2018}.ctl
+
+path=/mnt/nas1/IMD_T_1951_2018/IMD_MaxT_1951_2018/
+
+
+for year in {1951..2018}
+do
+    printf "\033c"
+    echo "$year"
+    days="$(isleap "$year")"
+    file="DSET "$path"_Clim_Pred_LRF_New_GridDataDownload_Maxtemp_MaxT_"$year".GRD"
+    #echo "$file"
+    echo "$file" >> "$year.ctl"
+    echo "TITLE 1 degree analyzed grids" >> "$year.ctl"
+    echo "UNDEF 99.9" >> "$year.ctl"
+    echo "XDEF 31 LINEAR 67.5 1" >> "$year.ctl"
+    echo "YDEF 31 LINEAR 7.5 1" >> "$year.ctl"
+    echo "ZDEF 1  Linear 1 1" >> "$year.ctl"
+    echo "TDEF $days LINEAR 1JAN$year 1DY" >> "$year.ctl"
+    echo "VARS 1" >> "$year.ctl"
+    echo "T 0 99 DAILYTEMP" >> "$year.ctl"
+    echo "ENDVARS" >> "$year.ctl"
+
+    ###
+    # Convert to .nc
+    ###
+    cdo -f nc import_binary $year.ctl MaxT_$year.nc
+done
+
+###
+# Concatenating to one .nc file
+###
+rm -rf *.ctl
+rm -rf IMD_MaxT_1951_2018.nc
+cdo cat *.nc IMD_MaxT_1951_2018.nc
